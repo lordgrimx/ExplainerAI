@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Explainer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Project Explainer</h1>
+        <p>Upload a project folder to generate explanations for each file using OpenRouter AI.</p>
+        
+        <div class="upload-container">
+            <form action="{{ url_for('upload_folder') }}" method="post" enctype="multipart/form-data">
+                <div class="file-input-container">
+                    <label for="folder-input" class="custom-file-upload">
+                        <span>Choose project files</span>
+                    </label>
+                    <input type="file" id="folder-input" name="folder" multiple webkitdirectory directory>
+                    <div id="file-list-container" class="file-list-container">
+                        <p>No files selected</p>
+                    </div>
+                </div>
+                <button type="submit" class="submit-btn">Upload Project</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

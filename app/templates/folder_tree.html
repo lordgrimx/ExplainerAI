@@ -1,0 +1,15 @@
+<ul>
+    {% for child in item.children %}
+        {% if child.type == 'folder' %}
+            <li class="folder">
+                <span class="folder-name">📁 {{ child.name }}</span>
+                {% set item = child %}
+                {% include 'folder_tree.html' %}
+            </li>
+        {% else %}
+            <li class="file">
+                <span class="file-name">📄 {{ child.name }}</span>
+            </li>
+        {% endif %}
+    {% endfor %}
+</ul>

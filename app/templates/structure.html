@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Structure - Project Explainer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Project Structure</h1>
+        <p>Review your project structure and generate explanations.</p>
+        
+        <div class="structure-container">
+            <div class="file-tree">
+                <ul class="tree">
+                    {% for item in structure %}
+                        {% if item.type == 'folder' %}
+                            <li class="folder">
+                                <span class="folder-name">📁 {{ item.name }}</span>
+                                {% if item.children %}
+                                    {% include 'folder_tree.html' with context %}
+                                {% endif %}
+                            </li>
+                        {% else %}
+                            <li class="file">
+                                <span class="file-name">📄 {{ item.name }}</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button id="generate-btn" class="generate-btn">Generate Explanations</button>
+            <a href="{{ url_for('index') }}" class="back-btn">Upload Different Project</a>
+        </div>
+        
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Generating explanations... This may take a while depending on project size.</p>
+        </div>
+        
+        <div id="results" class="results hidden">
+            <h2>Results</h2>
+            <p>Explanations have been generated successfully!</p>
+            <div class="download-section">
+                <a id="overview-link" href="#" class="download-btn">Download Project Overview</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/structure.js') }}"></script>
+</body>
+</html>
