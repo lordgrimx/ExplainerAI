@@ -246,9 +246,11 @@ def format_structure_for_prompt(structure, level=0):
     return result
 
 def get_explanation_from_openrouter(prompt, file_path):
-    """Call OpenRouter API using direct HTTP request instead of the Python library"""
+    """Call OpenRouter API using direct HTTP request"""
     try:
         headers = {
+            "HTTP-Referer": "https://localhost:5000", # Required for OpenRouter API
+            "X-Title": "Project Explainer",  # Optional, but recommended
             "Authorization": f"Bearer {OPENAI_API_KEY}",
             "Content-Type": "application/json"
         }
@@ -256,23 +258,40 @@ def get_explanation_from_openrouter(prompt, file_path):
         data = {
             "model": OPENAI_MODEL,
             "messages": [
+                {"role": "system", "content": "You are a helpful assistant that explains code in a clear and concise way."},
                 {"role": "user", "content": prompt}
             ],
+            "temperature": 0.7
         }
         
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
-            json=data,
+            json=data
         )
         
+        response.raise_for_status()  # Raise an exception for bad status codes
+        
         if response.status_code == 200:
-            return response.json()["choices"][0]["message"]["content"]
+            try:
+                result = response.json()
+                if "choices" in result and len(result["choices"]) > 0:
+                    return result["choices"][0]["message"]["content"]
+                else:
+                    raise ValueError("No content in API response")
+            except Exception as e:
+                error_message = f"Failed to parse API response: {str(e)}"
+                print(error_message)
+                return f"Failed to generate explanation: {error_message}"
         else:
             error_message = f"API error: {response.status_code} - {response.text}"
             print(error_message)
             return f"Failed to generate explanation: {error_message}"
             
+    except requests.exceptions.RequestException as e:
+        error_message = f"Request error: {str(e)}"
+        print(f"Error generating explanation for {file_path}: {error_message}")
+        return f"Failed to generate explanation: {error_message}"
     except Exception as e:
         print(f"Error generating explanation for {file_path}: {e}")
         return f"Failed to generate explanation: {str(e)}"

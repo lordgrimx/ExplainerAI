@@ -10,8 +10,48 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Process .gitignore files first
+        let gitignorePatterns = [];
+        Array.from(files).forEach(file => {
+            const path = file.webkitRelativePath;
+            const fileName = path.split('/').pop();
+            
+            if (fileName === '.gitignore') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    const patterns = content.split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line && !line.startsWith('#'));
+                    gitignorePatterns = gitignorePatterns.concat(patterns);
+                    
+                    // After processing gitignore, filter and display files
+                    displayFilteredFiles(files, gitignorePatterns);
+                };
+                reader.readAsText(file);
+            }
+        });
+        
+        // If no .gitignore files found, just display all files
+        if (gitignorePatterns.length === 0) {
+            displayFilteredFiles(files, []);
+        }
+    });
+    
+    function displayFilteredFiles(files, gitignorePatterns) {
         // Clear previous content
         fileListContainer.innerHTML = '';
+        
+        // Filter files based on gitignore patterns
+        const filteredFiles = Array.from(files).filter(file => {
+            const path = file.webkitRelativePath;
+            return !shouldIgnoreFile(path, gitignorePatterns);
+        });
+        
+        if (filteredFiles.length === 0) {
+            fileListContainer.innerHTML = '<p>No files to display after applying .gitignore filters</p>';
+            return;
+        }
         
         // Create a file list element
         const fileList = document.createElement('ul');
@@ -20,11 +60,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Keep track of displayed paths to avoid duplicates
         const displayedPaths = new Set();
         
-        // Create a map to organize files by directory
-        const fileTree = {};
-        
         // Process each file
-        Array.from(files).forEach(file => {
+        filteredFiles.forEach(file => {
             const path = file.webkitRelativePath;
             const parts = path.split('/');
             
@@ -50,10 +87,92 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Display the total number of files
         const totalFiles = document.createElement('p');
-        totalFiles.textContent = `Total: ${files.length} files selected`;
+        totalFiles.textContent = `Total: ${filteredFiles.length} files selected (${files.length - filteredFiles.length} excluded by .gitignore)`;
         fileListContainer.appendChild(totalFiles);
         
         // Add the file list
         fileListContainer.appendChild(fileList);
-    });
+        
+        // Update the form to only include filtered files
+        updateFormFiles(filteredFiles);
+    }
+    
+    function shouldIgnoreFile(filePath, patterns) {
+        if (patterns.length === 0) return false;
+        
+        const parts = filePath.split('/');
+        const fileName = parts.pop();
+        
+        for (const pattern of patterns) {
+            // Handle simple exact matches
+            if (pattern === fileName) return true;
+            
+            // Handle directory patterns (ending with /)
+            if (pattern.endsWith('/')) {
+                const dirPattern = pattern.slice(0, -1);
+                if (parts.some(part => part === dirPattern)) return true;
+            }
+            
+            // Handle wildcard patterns
+            if (pattern.includes('*')) {
+                const regexPattern = pattern
+                    .replace(/\./g, '\\.')
+                    .replace(/\*/g, '.*')
+                    .replace(/\?/g, '.');
+                const regex = new RegExp(`^${regexPattern}$`);
+                
+                if (regex.test(fileName)) return true;
+                
+                // Check if any directory in the path matches the pattern
+                if (parts.some(part => regex.test(part))) return true;
+            }
+            
+            // Handle file path patterns
+            if (filePath.includes(pattern) || filePath.startsWith(pattern)) return true;
+        }
+        
+        return false;
+    }
+    
+    function updateFormFiles(filteredFiles) {
+        // Create a FormData object to update the form
+        const formData = new FormData();
+        
+        // Modify the form submission to only include filtered files
+        const form = document.querySelector('form');
+        const originalSubmit = form.onsubmit;
+        
+        form.onsubmit = function(e) {
+            e.preventDefault();
+            
+            // Create a new FormData with only the filtered files
+            const newFormData = new FormData();
+            
+            // Add all the filtered files
+            filteredFiles.forEach(file => {
+                newFormData.append('folder', file);
+            });
+            
+            // Get the form's action URL
+            const actionUrl = form.getAttribute('action');
+            
+            // Submit the form with the filtered files
+            fetch(actionUrl, {
+                method: 'POST',
+                body: newFormData
+            }).then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    return response.json();
+                }
+            }).then(data => {
+                if (data && data.error) {
+                    alert('Error: ' + data.error);
+                }
+            }).catch(error => {
+                console.error('Error submitting form:', error);
+            });
+        };
+    }
 });
