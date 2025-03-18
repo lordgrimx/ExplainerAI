@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const folderInput = document.getElementById('folder-input');
     const fileListContainer = document.getElementById('file-list-container');
+    const languageSelect = document.getElementById('explanation-language');
     
     folderInput.addEventListener('change', function(e) {
         const files = e.target.files;
@@ -135,28 +136,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateFormFiles(filteredFiles) {
-        // Create a FormData object to update the form
-        const formData = new FormData();
-        
-        // Modify the form submission to only include filtered files
         const form = document.querySelector('form');
-        const originalSubmit = form.onsubmit;
         
         form.onsubmit = function(e) {
             e.preventDefault();
             
-            // Create a new FormData with only the filtered files
+            // Create a new FormData with filtered files and language
             const newFormData = new FormData();
+            
+            // Add the selected language
+            newFormData.append('explanation-language', languageSelect.value);
             
             // Add all the filtered files
             filteredFiles.forEach(file => {
                 newFormData.append('folder', file);
             });
             
-            // Get the form's action URL
+            // Get the form's action URL and submit
             const actionUrl = form.getAttribute('action');
             
-            // Submit the form with the filtered files
             fetch(actionUrl, {
                 method: 'POST',
                 body: newFormData

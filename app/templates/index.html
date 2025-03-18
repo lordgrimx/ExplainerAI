@@ -11,6 +11,14 @@
         <h1>Project Explainer</h1>
         <p>Upload a project folder to generate explanations for each file using OpenRouter AI.</p>
         
+        <div class="language-selector">
+            <label for="explanation-language">Explanation Language:</label>
+            <select id="explanation-language" name="explanation-language">
+                <option value="en">English</option>
+                <option value="tr">Turkish</option>
+            </select>
+        </div>
+        
         <div class="upload-container">
             <form action="{{ url_for('upload_folder') }}" method="post" enctype="multipart/form-data">
                 <div class="file-input-container">

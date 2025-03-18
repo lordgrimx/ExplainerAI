@@ -26,6 +26,27 @@ GOOGLE_AI_MODEL = os.getenv('GOOGLE_AI_MODEL', 'gemini-2.0-flash-thinking-exp-01
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel(GOOGLE_AI_MODEL)
 
+# Language prompt templates
+LANGUAGE_PROMPTS = {
+    'en': """Please explain the file {file_path} by analyzing each function and component in detail. For each function/component:
+
+1. Explain its purpose and role in simple terms that a beginner can understand
+2. Break down how it works and what problems it solves
+3. Explain any important technical concepts used in the function
+4. Describe how it interacts with other parts of the code
+
+Please make your explanations thorough but beginner-friendly, as if explaining to someone who is learning to code.""",
+    
+    'tr': """Lütfen {file_path} dosyasını her fonksiyon ve bileşeni detaylı analiz ederek açıklayın. Her fonksiyon/bileşen için:
+
+1. Amacını ve rolünü yeni başlayan birinin anlayabileceği basit terimlerle açıklayın
+2. Nasıl çalıştığını ve hangi problemleri çözdüğünü detaylandırın
+3. Fonksiyonda kullanılan önemli teknik kavramları açıklayın
+4. Kodun diğer parçalarıyla nasıl etkileşime girdiğini anlatın
+
+Lütfen açıklamalarınızı detaylı ama kodlamayı yeni öğrenen birine anlatıyormuş gibi başlangıç seviyesinde tutun."""
+}
+
 # Get API settings from .env
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 OPENAI_MODEL = os.getenv('OPENAI_MODEL')
@@ -38,6 +59,10 @@ def index():
 def upload_folder():
     if 'folder' not in request.files:
         return redirect(request.url)
+    
+    # Get the selected language
+    language = request.form.get('explanation-language', 'en')
+    session['language'] = language
     
     # First, create a temporary list of files to be uploaded
     files = request.files.getlist('folder')
@@ -138,6 +163,7 @@ def generate_explanation():
         return jsonify({'error': 'No file structure found'}), 400
     
     file_structure = session['file_structure']
+    language = session.get('language', 'en')
     
     # Create a base prompt with the project structure
     base_prompt = "# Project Structure\n\n```\n"
@@ -167,7 +193,7 @@ def generate_explanation():
         
         # Add file content to the base prompt
         file_prompt = base_prompt + f"## {relative_path}\n\n```\n{content}\n```\n\n"
-        file_prompt += f"Please explain the file {relative_path} line by line, detailing its purpose and functionality."
+        file_prompt += LANGUAGE_PROMPTS[language].format(file_path=relative_path)
         
         # Call OpenRouter API to explain the file
         explanation = get_explanation_from_openrouter(file_prompt, relative_path)

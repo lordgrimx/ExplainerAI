@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingSection = document.getElementById('loading');
     const resultsSection = document.getElementById('results');
     const overviewLink = document.getElementById('overview-link');
+    const languageSelect = document.getElementById('explanation-language');
     
     // Toggle folder visibility
     const folderNames = document.querySelectorAll('.folder-name');
@@ -23,6 +24,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Try to restore previously selected language from session
+    const savedLanguage = sessionStorage.getItem('explanation-language');
+    if (savedLanguage) {
+        languageSelect.value = savedLanguage;
+    }
+    
+    // Save language selection when changed
+    languageSelect.addEventListener('change', function() {
+        sessionStorage.setItem('explanation-language', this.value);
+    });
+    
     // Generate explanations when button is clicked
     generateBtn.addEventListener('click', function() {
         // Show loading indicator
@@ -34,7 +46,10 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({
+                language: languageSelect.value
+            })
         })
         .then(response => {
             if (!response.ok) {
