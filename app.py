@@ -5,7 +5,7 @@ import markdown
 import fnmatch
 from pathlib import Path
 from flask import Flask, request, render_template, redirect, url_for, jsonify, session, send_from_directory
-import requests
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -19,6 +19,12 @@ app.secret_key = 'explainer_secret_key'
 # Make sure the upload and output directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
+
+# Configure Google AI
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+GOOGLE_AI_MODEL = os.getenv('GOOGLE_AI_MODEL', 'gemini-2.0-flash-thinking-exp-01-21')  # Default to experimental model if not specified
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel(GOOGLE_AI_MODEL)
 
 # Get API settings from .env
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -246,52 +252,18 @@ def format_structure_for_prompt(structure, level=0):
     return result
 
 def get_explanation_from_openrouter(prompt, file_path):
-    """Call OpenRouter API using direct HTTP request"""
+    """Generate explanation using Google's Gemini API"""
     try:
-        headers = {
-            "HTTP-Referer": "https://localhost:5000", # Required for OpenRouter API
-            "X-Title": "Project Explainer",  # Optional, but recommended
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
-            "Content-Type": "application/json"
-        }
+        # Generate content using Gemini
+        response = model.generate_content(prompt)
         
-        data = {
-            "model": OPENAI_MODEL,
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant that explains code in a clear and concise way."},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.7
-        }
-        
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=data
-        )
-        
-        response.raise_for_status()  # Raise an exception for bad status codes
-        
-        if response.status_code == 200:
-            try:
-                result = response.json()
-                if "choices" in result and len(result["choices"]) > 0:
-                    return result["choices"][0]["message"]["content"]
-                else:
-                    raise ValueError("No content in API response")
-            except Exception as e:
-                error_message = f"Failed to parse API response: {str(e)}"
-                print(error_message)
-                return f"Failed to generate explanation: {error_message}"
+        if response.text:
+            return response.text
         else:
-            error_message = f"API error: {response.status_code} - {response.text}"
+            error_message = "No content in API response"
             print(error_message)
             return f"Failed to generate explanation: {error_message}"
             
-    except requests.exceptions.RequestException as e:
-        error_message = f"Request error: {str(e)}"
-        print(f"Error generating explanation for {file_path}: {error_message}")
-        return f"Failed to generate explanation: {error_message}"
     except Exception as e:
         print(f"Error generating explanation for {file_path}: {e}")
         return f"Failed to generate explanation: {str(e)}"
